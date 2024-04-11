@@ -8,7 +8,7 @@
 import UIKit
 import CoreData
 
-class ContactsViewController: UIViewController, UITextFieldDelegate, DateControllerDelegate {
+class ContactsViewController: UIViewController, UITextFieldDelegate, DateControllerDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
 
     var currentContact: Contact?
     let appDelegate = UIApplication.shared.delegate as! AppDelegate
@@ -26,6 +26,13 @@ class ContactsViewController: UIViewController, UITextFieldDelegate, DateControl
     @IBOutlet weak var txtHome: UITextField!
     @IBOutlet weak var btnChange: UIButton!
     @IBOutlet weak var lblBirthdate: UILabel!
+    
+    //Picture UI
+    @IBOutlet weak var imgContactPicture: UIImageView!
+    
+    //Calling
+    @IBOutlet weak var lblHomePhone: UILabel!
+    @IBOutlet weak var lblCellPhone: UILabel!
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -48,6 +55,10 @@ class ContactsViewController: UIViewController, UITextFieldDelegate, DateControl
             if currentContact!.birthday != nil {
                 lblBirthdate.text = formatter.string(from: currentContact!.birthday!)
             }
+            
+            //Long Hold Call
+            let longPress = UILongPressGestureRecognizer.init(target: self, action: #selector(callPhone(gesture:)))
+            lblHomePhone.addGestureRecognizer(longPress)
         }
         
         changeEditMode(self)
@@ -137,7 +148,43 @@ class ContactsViewController: UIViewController, UITextFieldDelegate, DateControl
         super.viewWillDisappear(animated)
         unregisterKeyboardNotification()
     }
+    
+    //Picture functionality
+    @IBAction func changePicture(_ sender: Any) {
+        if UIImagePickerController.isSourceTypeAvailable(.camera) {
+            let cameraController = UIImagePickerController()
+            cameraController.sourceType = .camera
+            cameraController.cameraCaptureMode = .photo
+            cameraController.delegate = self
+            cameraController.allowsEditing = true
+            self.present(cameraController, animated: true, completion: nil)
+        }
+    }
+    
+    func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+        if let image = info[.editedImage] as? UIImage {
+            imgContactPicture.contentMode = .scaleAspectFit
+            if let imageData = currentContact?.image as? Data {
+                imgContactPicture.image = UIImage(data: imageData)
+            }
+            imgContactPicture.image = image
+        }
+        dismiss(animated: true, completion: nil)
+    }
+    
+    //Call Functionality
+    @objc func callPhone (gesture: UILongPressGestureRecognizer) {
+        if gesture.state == .began {
+            let number = txtHome.text
+            if number!.count > 0 {
+                let url = NSURL(string: "telprompt://\(number!)")
+                UIApplication.shared.open(url as! URL, options: [:], completionHandler:  nil)
+                print("Calling Phone Number: \(url!)")
+            }
+        }
+    }
 
+    
     func registerKeyboardNotifications() {
         NotificationCenter.default.addObserver(self, selector: #selector(keyboardDidShow(notification:)), name: UIResponder.keyboardDidShowNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillHide(notification:)), name: UIResponder.keyboardWillHideNotification, object: nil)
